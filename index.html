@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="google" value="notranslate">
+  <title>Blockly Demo:</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="/storage.js"></script>
+  <script src="../../blockly_compressed.js"></script>
+  <script src="../../blocks_compressed.js"></script>
+  <script src="../../javascript_compressed.js"></script>
+  <script src="../../python_compressed.js"></script>
+  <script src="../../php_compressed.js"></script>
+  <script src="../../lua_compressed.js"></script>
+  <script src="../../dart_compressed.js"></script>
+  <script src="code.js"></script>
+  <script src="jquery.min.js"></script>
+  <script id="library" lang="Javascript">
+  
+  function createTask(taskName,appId,params) {
+	return new Promise(resolve => {
+		
+		if($("span:contains('" + taskName + "')").length > 0)
+		{
+			console.log("Task " + taskName + " exists.");	
+			resolve(20);
+		}
+		else
+		{
+			var delay = 2000;
+			var taskId = taskName.toLowerCase();
+			
+			var resolvePromise = function()
+			{
+				resolve(20);				
+			};
+			
+			var setAppParams = function()
+			{
+				
+				$.get("https://api.github.com/repos/CoMeMak/data/contents/coords.json", function(data) {
+					var coords = JSON.parse(atob(data.content));
+					console.log("Current robot coordinates:" + atob(data.content));
+					
+					params.x = params.x - coords.x * 1000;
+					params.y = params.y - coords.y * 1000;
+					params.z = params.z - coords.z * 1000;
+					
+					console.log("Dist per axis: " + JSON.stringify(params));
+					
+					var appParams = [{"path":{"id":taskId,"indices":[0,0]},"parameter":{"acceleration":0.15,"cartesian_impedance":{"access":["parent","parameter","cartesian_impedance"]},"joint_impedance":{"access":["parent","parameter","joint_impedance"]},"offset":{"x":parseFloat(params.x)/1000,"y":parseFloat(params.y)/1000,"z":parseFloat(params.z)/1000},"safety":{"access":["parent","parameter","safety"]},"speed":{"access":["parent","parameter","speed"]},"velocity":0.3,"world":true}}];
+					
+					$.ajax({
+						type: 'PUT',
+						url: '/desk/api/timelines',
+						contentType: 'application/x-www-form-urlencoded',
+						data: {
+							parameters: JSON.stringify(appParams)
+						}, 
+					}).done(function () {
+						console.log('Added parameters to app');
+						setTimeout(resolvePromise, delay);
+					}).fail(function (msg) {
+						console.log(msg);
+					});
+				});		
+					
+			};
+			
+			var addApp = function()
+			{
+				$.post( "/desk/api/timelines/" + taskId + "/0/0", { id: appId } ).done(function( data ) 
+				{
+					console.log("Created app: " + appId);
+					setTimeout(setAppParams, delay);				
+				});
+			};
+			
+			var loadTask = function()
+			{
+				$("span:contains('" + taskName + "')").trigger("click");
+				setTimeout(addApp, delay);
+			};
+			
+			$.post( "/desk/api/timelines", { name: taskName } ).done(function( data ) 
+			{
+				console.log("Created task: " + taskName);
+				setTimeout(loadTask, delay);
+			});
+		};
+	});
+};
+
+/*
+function executeTask(taskName) {
+	return new Promise(resolve => {
+		var taskId = taskName.toLowerCase();
+		$.post( "/desk/api/execution", { id: taskId } ).done(function( data ) 
+		{
+			console.log("Executed task: " + taskName);
+			resolve(20);
+		});			
+	});
+}
+*/
+
+function executeTask(task) {
+	return new Promise(resolve => {
+		task = task.trim();
+		var state = "idle";
+		var cb = -1;
+		var PLAY_BTN = "i.fi-play"; /* previously "div.fi-play" */
+		var STOP_BTN = "i.fi-stop"; /* previously "div.fi-stop" */ 
+
+		cb = setInterval(function(){
+			if($(PLAY_BTN).length == 1 && state == "idle")
+			{
+				if(!$(".timeline-label")[0].textContent.includes(task))
+				{
+					$("span:contains('" + task + "')").trigger("click");
+				}
+				state = "init";
+			}
+			else if( $(PLAY_BTN).length == 1 && state == "init" && $(".timeline-label")[0].textContent.includes(task))
+			{
+				$(PLAY_BTN).trigger("click");
+				state = "waitforstop";
+				console.log(task + " task started.");
+			}
+			else if( $(STOP_BTN).length == 1 && state == "waitforstop")
+			{
+				state = "running";
+			}
+			else if( $(STOP_BTN).length == 1 && state == "running")
+			{
+				console.log(task + " still running...");
+			}
+			else if( $(PLAY_BTN).length == 1 && state == "running")
+			{
+				state = "finished";
+				console.log(task + " task finished.");
+			}
+			else if( state == "finished" )
+			{
+				clearInterval(cb);
+				resolve(20);				
+			}
+		},200);
+	});
+};
+
+
+/*
+const p1 = await createTask("AA1","move_relative",{"x":0.021,"y":0.022,"z":0.023});
+const p2 = await createTask("AA2","move_relative",{"x":-0.021,"y":-0.022,"z":-0.023});
+
+for(i=0;i<5;i++)
+{
+	const p3 = await executeTask("AA1");
+}
+
+for(i=0;i<5;i++)
+{
+	const p4 = await executeTask("AA2");
+}
+
+$.post( "/desk/api/execution", { id: "task336" } ).done(function( data ) 
+		{
+			console.log("Executed task: " + taskName);
+		});	
+*/
+  
+  </script>
+  
+  <script lang="Javascript">
+    var version = 1;
+	function generateVersion()
+	{
+		var code = $("#library").text();
+	    
+		code += Blockly.JavaScript.workspaceToCode(Code.workspace);
+		code = "var asyncRun = async function(){" + code + "};asyncRun();"
+		
+		code = "javascript:(function(){if(typeof ZHJ1bW1lcg === 'undefined'){var jQueryScript=document.createElement('script');jQueryScript.setAttribute('src','https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js');var caput=document.getElementsByTagName('head');caput[0].appendChild(jQueryScript);ZHJ1bW1lcg=true;}setTimeout(function(){$(document).ready(function(){" + code + "});},200);})();";
+		
+		code = code.replace("// Swap a and b to ensure a is smaller.",""); // remove comment added by random_int block
+		
+		$("#version").attr("href", code);
+		$("#version").text("V." + version++);
+	}
+  </script>
+</head>
+<body>
+  <table width="100%" height="100%">
+    <tr style="display: none;">
+      <td>
+        <h1><a href="https://developers.google.com/blockly/">Blockly</a>&rlm; &gt;
+          <a href="../index.html">Demos</a>&rlm; &gt;
+          <span id="title">...</span>
+        </h1>
+      </td>
+      <td class="farSide">
+        <select id="languageMenu"></select>
+      </td>
+    </tr>
+    <tr>
+      <td colspan=2>
+        <table width="100%">
+          <tr id="tabRow" height="1em">
+            <td id="tab_blocks" class="tabon">...</td>
+            <td class="tabmin">&nbsp;</td>
+            <td id="tab_javascript" class="taboff">JavaScript</td>
+            <td class="tabmin">&nbsp;</td>
+            <td id="tab_python" class="taboff">Python</td>
+            <td class="tabmin">&nbsp;</td>
+            <td id="tab_php" class="taboff">PHP</td>
+            <td class="tabmin">&nbsp;</td>
+            <td id="tab_lua" class="taboff">Lua</td>
+            <td class="tabmin">&nbsp;</td>
+            <td id="tab_dart" class="taboff">Dart</td>
+            <td class="tabmin">&nbsp;</td>
+            <td id="tab_xml" class="taboff">XML</td>
+            <td class="tabmax">
+			<script lang="javascript">
+			
+			function saveWorkspace()
+			{
+				var xml = Blockly.Xml.workspaceToDom(Blockly.mainWorkspace);
+				var content = Blockly.Xml.domToText(xml);
+				uriContent = "data:application/octet-stream," + encodeURIComponent(content);
+				newWindow = window.open(uriContent, 'neuesDokument');
+			}
+			
+		
+			
+			</script>
+			  
+			<span id="drop_zone">Drop file here to load workspace</span> ||
+
+
+<script>
+  function handleFileSelect(evt) {
+    evt.stopPropagation();
+    evt.preventDefault();
+
+    var files = evt.dataTransfer.files; // FileList object.
+	var reader = new FileReader();
+	
+	reader.addEventListener("load", function(event) {
+        var textFile = event.target;
+        //alert(textFile.result);
+		Blockly.mainWorkspace.clear();
+        xmlDom = Blockly.Xml.textToDom(textFile.result);
+        Blockly.Xml.domToWorkspace(Blockly.mainWorkspace, xmlDom);
+    });
+	
+	var content = reader.readAsText(files[0]);
+  }
+
+  function handleDragOver(evt) {
+    evt.stopPropagation();
+    evt.preventDefault();
+    evt.dataTransfer.dropEffect = 'copy'; // Explicitly show this is a copy.
+  }
+
+  // Setup the dnd listeners.
+  var dropZone = document.getElementById('drop_zone');
+  dropZone.addEventListener('dragover', handleDragOver, false);
+  dropZone.addEventListener('drop', handleFileSelect, false);
+</script>
+			  <a href="javascript:saveWorkspace();">Save</a> ||
+			  
+			  Version: 
+			  <span><a id="version" href="blabla">None</a></span>
+			  <button id="trashButton" class="notext" title="...">
+                <img src='../../media/1x1.gif' class="trash icon21">
+              </button>
+              <button id="linkButton" class="notext" title="...">
+                <img src='../../media/1x1.gif' class="link icon21">
+              </button>
+              <button onclick="generateVersion()" id="runButton" class="notext primary" title="...">
+                <img src='../../media/1x1.gif' class="run icon21">
+              </button>			  
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    <tr>
+      <td height="99%" colspan=2 id="content_area">
+      </td>
+    </tr>
+  </table>
+  <div id="content_blocks" class="content"></div>
+  <pre id="content_javascript" class="content"></pre>
+  <pre id="content_python" class="content"></pre>
+  <pre id="content_php" class="content"></pre>
+  <pre id="content_lua" class="content"></pre>
+  <pre id="content_dart" class="content"></pre>
+  <textarea id="content_xml" class="content" wrap="off"></textarea>
+
+  <script lang="JavaScript">
+function getRandomInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+  
+var frankaTaskJson = {
+  "message0": "Task %1", //  + %2",
+  "args0": [
+	{"type": "field_input","name": "TASKNAME","text": "Task","spellcheck": false},
+	//{"type": "field_variable", "name": "TASKNAME", "check": "String"}
+	//{"type": "field_variable", "name": "NAMEPATTERN", "variable": "pattern"}
+  ],
+  "previousStatement": null,
+  "nextStatement": null,
+  "colour": 230
+};
+
+Blockly.Blocks['franka_task'] = {
+  init: function() {
+    this.jsonInit(frankaTaskJson);
+    // Assign 'this' to a variable for use in the tooltip closure below.
+    var thisBlock = this;
+	this.setTooltip(function() {
+      return 'Execute Franka Emika task';
+    });
+  }
+};
+
+
+Blockly.JavaScript['franka_task'] = function(block) {
+  // Search the text for a substring.
+  //alert();
+  var task_name = block.getFieldValue('TASKNAME');
+  
+  //var code = "if(pattern == null){pattern = \'\';};";
+  //var code = code + "const promise_" + getRandomInt(100000,200000) + " = await executeTask('" + task_name.trim() + "' + pattern);";
+  
+  var code = "const promise_" + getRandomInt(100000,200000) + " = await executeTask('" + task_name.trim() + "');\n";
+  
+  //var code = "executeTask(taskName);";
+  
+  //var code = "$('.library-content > one-library-timeline > div:contains(\"" + task_name +"\")').trigger(\"click\");";
+/*
+setTimeout(function() {
+	var playButton = $( ".execution-button.fi-play" );
+	playButton.trigger( "click" );
+}, 2000);
+*/  
+  return code;//[code, Blockly.JavaScript.ORDER_MEMBER];
+};
+
+var frankaTaskPatternJson = {
+  "message0": "Task %1", //  + %2",
+  "args0": [
+	//{"type": "field_input","name": "TASKNAME","text": "Task","spellcheck": false},
+	//{"type": "field_variable", "name": "TASKNAME", "check": "String"}
+	{"type": "field_variable", "name": "NAMEPATTERN", "variable": "pattern"}
+  ],
+  "previousStatement": null,
+  "nextStatement": null,
+  "colour": 230
+};
+
+Blockly.Blocks['franka_task_pattern'] = {
+  init: function() {
+    this.jsonInit(frankaTaskPatternJson);
+    // Assign 'this' to a variable for use in the tooltip closure below.
+    var thisBlock = this;
+	this.setTooltip(function() {
+      return 'Execute Franka Emika task with name pattern';
+    });
+  }
+};
+
+
+Blockly.JavaScript['franka_task_pattern'] = function(block) {
+  
+  var code = "if(pattern == null){pattern = \'\';}\n";
+  var code = code + "const promise_" + getRandomInt(100000,200000) + " = await executeTask(pattern);\n";
+  return code;//[code, Blockly.JavaScript.ORDER_MEMBER];
+};
+
+var frankaMoveXYZJson = {
+  "message0": "Move x:%1 y:%2 z:%3 mm", //  + %2",
+  "args0": [
+	{"type": "field_input","name": "X","text": "0","spellcheck": false},
+	{"type": "field_input","name": "Y","text": "0","spellcheck": false},
+	{"type": "field_input","name": "Z","text": "0","spellcheck": false}
+  ],
+  "previousStatement": null,
+  "nextStatement": null,
+  "colour": 230
+};
+
+Blockly.Blocks['franka_move_xyz'] = {
+  init: function() {
+    this.jsonInit(frankaMoveXYZJson);
+    // Assign 'this' to a variable for use in the tooltip closure below.
+    var thisBlock = this;
+	this.setTooltip(function() {
+      return 'Execute Franka Emika move to XYZ';
+    });
+  }
+};
+
+
+Blockly.JavaScript['franka_move_xyz'] = function(block) {
+  
+  var x = parseInt(block.getFieldValue('X'));
+  var y = parseInt(block.getFieldValue('Y'));
+  var z = parseInt(block.getFieldValue('Z'));
+  
+  var task_name = "A_MOVE_X"+ x + "_Y" + y + "_Z" + z;
+  
+  var code = "const promise_" + getRandomInt(100000,200000) + " = await createTask('" + task_name + "','move_relative',{\"x\": " + x + ", \"y\": " + y + ", \"z\": " + z + "});\n";
+  
+  code += "const promise_" + getRandomInt(100000,200000) + " = await executeTask('" + task_name.trim() + "');\n";
+  
+  return code;//[code, Blockly.JavaScript.ORDER_MEMBER];
+};
+
+
+  </script>
+  
+  <xml id="toolbox" style="display: none">
+    <category name="%{BKY_CATLOGIC}" colour="%{BKY_LOGIC_HUE}">
+      <block type="controls_if"></block>
+      <block type="logic_compare"></block>
+      <block type="logic_operation"></block>
+      <block type="logic_negate"></block>
+      <block type="logic_boolean"></block>
+      <block type="logic_null"></block>
+      <block type="logic_ternary"></block>
+    </category>
+    <category name="%{BKY_CATLOOPS}" colour="%{BKY_LOOPS_HUE}">
+      <block type="controls_repeat_ext">
+        <value name="TIMES">
+          <shadow type="math_number">
+            <field name="NUM">10</field>
+          </shadow>
+        </value>
+      </block>
+      <block type="controls_whileUntil"></block>
+      <block type="controls_for">
+        <value name="FROM">
+          <shadow type="math_number">
+            <field name="NUM">1</field>
+          </shadow>
+        </value>
+        <value name="TO">
+          <shadow type="math_number">
+            <field name="NUM">10</field>
+          </shadow>
+        </value>
+        <value name="BY">
+          <shadow type="math_number">
+            <field name="NUM">1</field>
+          </shadow>
+        </value>
+      </block>
+      <block type="controls_forEach"></block>
+      <block type="controls_flow_statements"></block>
+    </category>
+	<category name="Franka" colour="%{BKY_TEXTS_HUE}">
+		<block type="franka_task"></block>
+		<block type="franka_task_pattern"></block>
+		<block type="franka_move_xyz"></block>
+	</category>
+    <category name="%{BKY_CATMATH}" colour="%{BKY_MATH_HUE}">
+      <block type="math_number">
+        <field name="NUM">123</field>
+      </block>
+      <block type="math_arithmetic">
+        <value name="A">
+          <shadow type="math_number">
+            <field name="NUM">1</field>
+          </shadow>
+        </value>
+        <value name="B">
+          <shadow type="math_number">
+            <field name="NUM">1</field>
+          </shadow>
+        </value>
+      </block>
+      <block type="math_single">
+        <value name="NUM">
+          <shadow type="math_number">
+            <field name="NUM">9</field>
+          </shadow>
+        </value>
+      </block>
+      <block type="math_trig">
+        <value name="NUM">
+          <shadow type="math_number">
+            <field name="NUM">45</field>
+          </shadow>
+        </value>
+      </block>
+      <block type="math_constant"></block>
+      <block type="math_number_property">
+        <value name="NUMBER_TO_CHECK">
+          <shadow type="math_number">
+            <field name="NUM">0</field>
+          </shadow>
+        </value>
+      </block>
+      <block type="math_round">
+        <value name="NUM">
+          <shadow type="math_number">
+            <field name="NUM">3.1</field>
+          </shadow>
+        </value>
+      </block>
+      <block type="math_on_list"></block>
+      <block type="math_modulo">
+        <value name="DIVIDEND">
+          <shadow type="math_number">
+            <field name="NUM">64</field>
+          </shadow>
+        </value>
+        <value name="DIVISOR">
+          <shadow type="math_number">
+            <field name="NUM">10</field>
+          </shadow>
+        </value>
+      </block>
+      <block type="math_constrain">
+        <value name="VALUE">
+          <shadow type="math_number">
+            <field name="NUM">50</field>
+          </shadow>
+        </value>
+        <value name="LOW">
+          <shadow type="math_number">
+            <field name="NUM">1</field>
+          </shadow>
+        </value>
+        <value name="HIGH">
+          <shadow type="math_number">
+            <field name="NUM">100</field>
+          </shadow>
+        </value>
+      </block>
+      <block type="math_random_int">
+        <value name="FROM">
+          <shadow type="math_number">
+            <field name="NUM">1</field>
+          </shadow>
+        </value>
+        <value name="TO">
+          <shadow type="math_number">
+            <field name="NUM">100</field>
+          </shadow>
+        </value>
+      </block>
+      <block type="math_random_float"></block>
+    </category>
+    <category name="%{BKY_CATTEXT}" colour="%{BKY_TEXTS_HUE}">
+      <block type="text"></block>
+      <block type="text_join"></block>
+      <block type="text_append">
+        <value name="TEXT">
+          <shadow type="text"></shadow>
+        </value>
+      </block>
+      <block type="text_length">
+        <value name="VALUE">
+          <shadow type="text">
+            <field name="TEXT">abc</field>
+          </shadow>
+        </value>
+      </block>
+      <block type="text_isEmpty">
+        <value name="VALUE">
+          <shadow type="text">
+            <field name="TEXT"></field>
+          </shadow>
+        </value>
+      </block>
+      <block type="text_indexOf">
+        <value name="VALUE">
+          <block type="variables_get">
+            <field name="VAR">{textVariable}</field>
+          </block>
+        </value>
+        <value name="FIND">
+          <shadow type="text">
+            <field name="TEXT">abc</field>
+          </shadow>
+        </value>
+      </block>
+      <block type="text_charAt">
+        <value name="VALUE">
+          <block type="variables_get">
+            <field name="VAR">{textVariable}</field>
+          </block>
+        </value>
+      </block>
+      <block type="text_getSubstring">
+        <value name="STRING">
+          <block type="variables_get">
+            <field name="VAR">{textVariable}</field>
+          </block>
+        </value>
+      </block>
+      <block type="text_changeCase">
+        <value name="TEXT">
+          <shadow type="text">
+            <field name="TEXT">abc</field>
+          </shadow>
+        </value>
+      </block>
+      <block type="text_trim">
+        <value name="TEXT">
+          <shadow type="text">
+            <field name="TEXT">abc</field>
+          </shadow>
+        </value>
+      </block>
+      <block type="text_print">
+        <value name="TEXT">
+          <shadow type="text">
+            <field name="TEXT">abc</field>
+          </shadow>
+        </value>
+      </block>
+      <block type="text_prompt_ext">
+        <value name="TEXT">
+          <shadow type="text">
+            <field name="TEXT">abc</field>
+          </shadow>
+        </value>
+      </block>
+    </category>
+    <category name="%{BKY_CATLISTS}" colour="%{BKY_LISTS_HUE}">
+      <block type="lists_create_with">
+        <mutation items="0"></mutation>
+      </block>
+      <block type="lists_create_with"></block>
+      <block type="lists_repeat">
+        <value name="NUM">
+          <shadow type="math_number">
+            <field name="NUM">5</field>
+          </shadow>
+        </value>
+      </block>
+      <block type="lists_length"></block>
+      <block type="lists_isEmpty"></block>
+      <block type="lists_indexOf">
+        <value name="VALUE">
+          <block type="variables_get">
+            <field name="VAR">{listVariable}</field>
+          </block>
+        </value>
+      </block>
+      <block type="lists_getIndex">
+        <value name="VALUE">
+          <block type="variables_get">
+            <field name="VAR">{listVariable}</field>
+          </block>
+        </value>
+      </block>
+      <block type="lists_setIndex">
+        <value name="LIST">
+          <block type="variables_get">
+            <field name="VAR">{listVariable}</field>
+          </block>
+        </value>
+      </block>
+      <block type="lists_getSublist">
+        <value name="LIST">
+          <block type="variables_get">
+            <field name="VAR">{listVariable}</field>
+          </block>
+        </value>
+      </block>
+      <block type="lists_split">
+        <value name="DELIM">
+          <shadow type="text">
+            <field name="TEXT">,</field>
+          </shadow>
+        </value>
+      </block>
+      <block type="lists_sort"></block>
+    </category>
+    <category name="%{BKY_CATCOLOUR}" colour="%{BKY_COLOUR_HUE}">
+      <block type="colour_picker"></block>
+      <block type="colour_random"></block>
+      <block type="colour_rgb">
+        <value name="RED">
+          <shadow type="math_number">
+            <field name="NUM">100</field>
+          </shadow>
+        </value>
+        <value name="GREEN">
+          <shadow type="math_number">
+            <field name="NUM">50</field>
+          </shadow>
+        </value>
+        <value name="BLUE">
+          <shadow type="math_number">
+            <field name="NUM">0</field>
+          </shadow>
+        </value>
+      </block>
+      <block type="colour_blend">
+        <value name="COLOUR1">
+          <shadow type="colour_picker">
+            <field name="COLOUR">#ff0000</field>
+          </shadow>
+        </value>
+        <value name="COLOUR2">
+          <shadow type="colour_picker">
+            <field name="COLOUR">#3333ff</field>
+          </shadow>
+        </value>
+        <value name="RATIO">
+          <shadow type="math_number">
+            <field name="NUM">0.5</field>
+          </shadow>
+        </value>
+      </block>
+    </category>
+    <sep></sep>
+    <category name="%{BKY_CATVARIABLES}" colour="%{BKY_VARIABLES_HUE}" custom="VARIABLE"></category>
+    <category name="%{BKY_CATFUNCTIONS}" colour="%{BKY_PROCEDURES_HUE}" custom="PROCEDURE"></category>
+  </xml>
+
+</body>
+</html>
