@@ -37,6 +37,25 @@
 			
 			var setAppParams = function()
 			{
+				$.get("https://api.github.com/repos/CoMeMak/data/contents/coords.json", function(data) {
+					$.ajax({
+						type: 'DELETE',
+						url: 'https://api.github.com/repos/CoMeMak/data/contents/coords.json',
+						data: {
+							sha: data.sha,
+							message: "my commit message",
+						    committer: {
+							name: "Tudor Ionescu",
+							email: "tudor.ionescu@tuwien.ac.at"
+						  },
+						}, 
+					}).done(function () {
+						console.log('Added parameters to app');
+						setTimeout(resolvePromise, delay);
+					}).fail(function (msg) {
+						console.log(msg);
+					});
+				});
 				
 				$.get("https://api.github.com/repos/CoMeMak/data/contents/coords.json", function(data) {
 					var coords = JSON.parse(atob(data.content));
@@ -179,7 +198,7 @@ $.post( "/desk/api/execution", { id: "task336" } ).done(function( data )
 		var code = $("#library").text();
 	    
 		code += Blockly.JavaScript.workspaceToCode(Code.workspace);
-		code = "var asyncRun = async function(){" + code + "};asyncRun();"
+		/* code = "var asyncRun = async function(){" + code + "};asyncRun();" */
 		
 		code = "javascript:(function(){if(typeof ZHJ1bW1lcg === 'undefined'){var jQueryScript=document.createElement('script');jQueryScript.setAttribute('src','https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js');var caput=document.getElementsByTagName('head');caput[0].appendChild(jQueryScript);ZHJ1bW1lcg=true;}setTimeout(function(){$(document).ready(function(){" + code + "});},200);})();";
 		
@@ -304,6 +323,12 @@ function getRandomInt(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+function wrapAsync(code)
+{
+	var rc = getRandomInt(100000,200000);
+	code = "var async_" + rc + " = async function(){" + code + "}; async_" + rc + "();";
+	return code;
+}
   
 var frankaTaskJson = {
   "message0": "Task %1", //  + %2",
@@ -348,7 +373,7 @@ setTimeout(function() {
 	playButton.trigger( "click" );
 }, 2000);
 */  
-  return code;//[code, Blockly.JavaScript.ORDER_MEMBER];
+  return wrapAsync(code);//[code, Blockly.JavaScript.ORDER_MEMBER];
 };
 
 var frankaTaskPatternJson = {
@@ -379,7 +404,7 @@ Blockly.JavaScript['franka_task_pattern'] = function(block) {
   
   var code = "if(pattern == null){pattern = \'\';}\n";
   var code = code + "const promise_" + getRandomInt(100000,200000) + " = await executeTask(pattern);\n";
-  return code;//[code, Blockly.JavaScript.ORDER_MEMBER];
+  return wrapAsync(code);//[code, Blockly.JavaScript.ORDER_MEMBER];
 };
 
 var frankaMoveXYZJson = {
@@ -406,6 +431,7 @@ Blockly.Blocks['franka_move_xyz'] = {
 };
 
 
+
 Blockly.JavaScript['franka_move_xyz'] = function(block) {
   
   var x = parseInt(block.getFieldValue('X'));
@@ -418,7 +444,7 @@ Blockly.JavaScript['franka_move_xyz'] = function(block) {
   
   code += "const promise_" + getRandomInt(100000,200000) + " = await executeTask('" + task_name.trim() + "');\n";
   
-  return code;//[code, Blockly.JavaScript.ORDER_MEMBER];
+  return wrapAsync(code);//[code, Blockly.JavaScript.ORDER_MEMBER];
 };
 
 
