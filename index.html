@@ -16,7 +16,7 @@
   <script src="code.js"></script>
   <script src="jquery.min.js"></script>
   <script id="library" lang="Javascript">
-  
+
   function createTask(taskName,appId,params) {
 	return new Promise(resolve => {
 		
@@ -37,25 +37,7 @@
 			
 			var setAppParams = function()
 			{
-				$.get("https://api.github.com/repos/CoMeMak/data/contents/coords.json", function(data) {
-					$.ajax({
-						type: 'DELETE',
-						url: 'https://api.github.com/repos/CoMeMak/data/contents/coords.json',
-						data: {
-							sha: data.sha,
-							message: "my commit message",
-						    committer: {
-							name: "Tudor Ionescu",
-							email: "tudor.ionescu@tuwien.ac.at"
-						  },
-						}, 
-					}).done(function () {
-						console.log('Added parameters to app');
-						setTimeout(resolvePromise, delay);
-					}).fail(function (msg) {
-						console.log(msg);
-					});
-				});
+				
 				
 				$.get("https://api.github.com/repos/CoMeMak/data/contents/coords.json", function(data) {
 					var coords = JSON.parse(atob(data.content));
@@ -152,6 +134,12 @@ function executeTask(task) {
 			}
 			else if( $(STOP_BTN).length == 1 && state == "running")
 			{
+				/*
+				if($("div.badge.badge-restart.error").length > 0)
+				{
+					$("div.badge.badge-restart.error").trigger("click");
+				}
+				*/
 				console.log(task + " still running...");
 			}
 			else if( $(PLAY_BTN).length == 1 && state == "running")
@@ -167,6 +155,7 @@ function executeTask(task) {
 		},200);
 	});
 };
+
 
 
 /*
@@ -198,7 +187,7 @@ $.post( "/desk/api/execution", { id: "task336" } ).done(function( data )
 		var code = $("#library").text();
 	    
 		code += Blockly.JavaScript.workspaceToCode(Code.workspace);
-		/* code = "var asyncRun = async function(){" + code + "};asyncRun();" */
+		code = "var asyncRun = async function(){" + code + ";}; asyncRun();";
 		
 		code = "javascript:(function(){if(typeof ZHJ1bW1lcg === 'undefined'){var jQueryScript=document.createElement('script');jQueryScript.setAttribute('src','https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js');var caput=document.getElementsByTagName('head');caput[0].appendChild(jQueryScript);ZHJ1bW1lcg=true;}setTimeout(function(){$(document).ready(function(){" + code + "});},200);})();";
 		
@@ -322,13 +311,6 @@ $.post( "/desk/api/execution", { id: "task336" } ).done(function( data )
 function getRandomInt(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
-
-function wrapAsync(code)
-{
-	var rc = getRandomInt(100000,200000);
-	code = "var async_" + rc + " = async function(){" + code + "}; async_" + rc + "();";
-	return code;
-}
   
 var frankaTaskJson = {
   "message0": "Task %1", //  + %2",
@@ -373,7 +355,7 @@ setTimeout(function() {
 	playButton.trigger( "click" );
 }, 2000);
 */  
-  return wrapAsync(code);//[code, Blockly.JavaScript.ORDER_MEMBER];
+  return code;//[code, Blockly.JavaScript.ORDER_MEMBER];
 };
 
 var frankaTaskPatternJson = {
@@ -404,7 +386,7 @@ Blockly.JavaScript['franka_task_pattern'] = function(block) {
   
   var code = "if(pattern == null){pattern = \'\';}\n";
   var code = code + "const promise_" + getRandomInt(100000,200000) + " = await executeTask(pattern);\n";
-  return wrapAsync(code);//[code, Blockly.JavaScript.ORDER_MEMBER];
+  return code;//[code, Blockly.JavaScript.ORDER_MEMBER];
 };
 
 var frankaMoveXYZJson = {
@@ -444,7 +426,43 @@ Blockly.JavaScript['franka_move_xyz'] = function(block) {
   
   code += "const promise_" + getRandomInt(100000,200000) + " = await executeTask('" + task_name.trim() + "');\n";
   
-  return wrapAsync(code);//[code, Blockly.JavaScript.ORDER_MEMBER];
+  return code;//[code, Blockly.JavaScript.ORDER_MEMBER];
+};
+
+var frankaMoveXYZVariableJson = {
+  "message0": "Move x:%1 y:%2 z:%3 mm", //  + %2",
+  "args0": [
+	{"type": "field_variable","name": "X","variable": "x"},
+	{"type": "field_variable","name": "Y","variable": "y"},
+	{"type": "field_variable","name": "Z","variable": "z"}
+  ],
+  "previousStatement": null,
+  "nextStatement": null,
+  "colour": 230
+};
+
+Blockly.Blocks['franka_move_xyz_variable'] = {
+  init: function() {
+    this.jsonInit(frankaMoveXYZVariableJson);
+    // Assign 'this' to a variable for use in the tooltip closure below.
+    var thisBlock = this;
+	this.setTooltip(function() {
+      return 'Execute Franka Emika move to XYZ';
+    });
+  }
+};
+
+
+
+Blockly.JavaScript['franka_move_xyz_variable'] = function(block) {
+  
+  var task_name = "A_MOVE_X'+ x + '_Y' + y + '_Z' + z";
+  
+  var code = "const promise_" + getRandomInt(100000,200000) + " = await createTask('" + task_name + ",'move_relative',{\"x\": x, \"y\": y, \"z\": z});\n";
+  
+  code += "const promise_" + getRandomInt(100000,200000) + " = await executeTask('" + task_name + ");\n";
+  
+  return code;//[code, Blockly.JavaScript.ORDER_MEMBER];
 };
 
 
@@ -493,6 +511,7 @@ Blockly.JavaScript['franka_move_xyz'] = function(block) {
 		<block type="franka_task"></block>
 		<block type="franka_task_pattern"></block>
 		<block type="franka_move_xyz"></block>
+		<block type="franka_move_xyz_variable"></block>
 	</category>
     <category name="%{BKY_CATMATH}" colour="%{BKY_MATH_HUE}">
       <block type="math_number">
